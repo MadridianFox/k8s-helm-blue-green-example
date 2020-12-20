@@ -1,0 +1,54 @@
+{{- $dot := . }}
+{{- range $ingress := $.Values.ingresses }}
+{{ if $ingress.enabled }}
+---
+{{ if semverCompare ">=1.14-0" $.Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+  {{- else -}}
+apiVersion: extensions/v1beta1
+  {{- end }}
+kind: Ingress
+metadata:
+  name: "{{ template "name" $dot }}-{{ $ingress.name }}"
+  {{- with $ingress.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- if $ingress.basic.enabled}}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: {{ $ingress.basic.secret }}
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+  {{- end }}
+  {{- if $ingress.certmanager.enabled}}
+    cert-manager.io/cluster-issuer: {{ $ingress.certmanager.issuer | quote }}
+  {{- end }}
+  {{- end }}
+  labels:
+    {{- include "labels" $dot | nindent 4 }}
+    bg-slot: {{ $.Values.blue_green.slot }}
+spec:
+  {{- if $ingress.tls }}
+  tls:
+    {{- range $ingress.tls }}
+    {{ if .enabled }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{ end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ . }}
+            backend:
+              serviceName: {{ template "fullname" $dot }}
+              servicePort: http
+          {{- end }}
+    {{- end }}
+{{ end }}
+{{- end }}

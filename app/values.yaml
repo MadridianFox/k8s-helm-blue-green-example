@@ -1,0 +1,22 @@
+# ==== general helm settings ====
+
+# fullnameOverride: ""
+# nameOverride: ""
+
+# ==== general k8s settings ====
+replicas: ${REPLICAS}
+
+resources:
+  requests:
+    cpu: ${CPU_REQUEST}
+    memory: ${MEMORY_REQUEST}
+  limits:
+    cpu: ${CPU_LIMIT}
+    memory: ${MEMORY_LIMIT}
+
+# ==== container params ====
+
+nginx:
+  repository: nginx
+  tag: '1.19.3-alpine'
+  resolver: ${RESOLVER}

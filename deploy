@@ -1,0 +1,52 @@
+#!/bin/bash
+
+envFile="${2:-".env.example"}"
+
+# определяем текущий слот
+ingressChartName=$(grep name ingress/Chart.yaml | sed -E 's/name:\s+//')
+currentSlot=$(kubectl get ingress -lapp.kubernetes.io/name=$ingressChartName -o yaml | grep bg-slot | sed -E 's/\s+bg-slot:\s+//')
+
+# вычисляем новый слот
+if [ "$currentSlot" == "" ]; then
+    currentSlot="green"
+    newSlot="green"
+    echo "No old slot. Set all to green"
+else
+    if [ "$currentSlot" == "blue" ]; then
+        newSlot="green"
+    else
+        newSlot="blue"
+    fi
+    echo "old slot is ${currentSlot}. Set new to ${newSlot}"
+fi
+
+# отгружаем релиз в новый слот
+echo "Install new release"
+releaseApp="${1:-"test-bg"}-${newSlot}"
+releaseIngress="${1:-"test-bg"}-ingress"
+
+(export $(cat $envFile); envsubst < app/values.yaml) | helm upgrade --install \
+    -f - \
+    $releaseApp \
+    app
+
+# ждём когда отгрузится
+echo "Wait for a rollout"
+
+kubectl rollout status -w deployment/"${releaseApp}"
+if [[ "$?" -ne 0 ]]; then
+    echo "Deployment failed!"
+    exit 1
+else
+    # переключаем ингресс на новый релиз
+    echo "Switch to new release"
+    appChartName=$(grep name app/Chart.yaml | sed -E 's/name:\s+//')
+    (export $(cat $envFile); envsubst < ingress/values.yaml) | helm upgrade --install \
+        --set="blue_green.slot=${newSlot}" \
+        --set="blue_green.name=${appChartName}" \
+        --set="blue_green.release=${releaseApp}" \
+        -f - \
+        $releaseIngress \
+        ingress
+    echo "Deployment succeeded."
+fi

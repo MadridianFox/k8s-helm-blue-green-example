@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "fullname" . }}
+spec:
+  selector:
+    {{- include "podSelector" . | nindent 4 }}
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80

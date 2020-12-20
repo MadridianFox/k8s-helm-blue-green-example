@@ -1,0 +1,29 @@
+# ==== general helm settings ====
+
+# fullnameOverride: ""
+# nameOverride: ""
+
+# ==== general k8s settings ====
+ingresses:
+  - name: primary-domain
+    enabled: ${PRIMARY_DOMAIN_ENABLED}
+    annotations:
+      kubernetes.io/ingress.class: ${PRIMARY_DOMAIN_INGRESS_CLASS}
+    hosts:
+      - host: ${PRIMARY_DOMAIN}
+        paths: ["/"]
+    tls:
+      - secretName: ${PRIMARY_DOMAIN_SECRET_NAME}
+        enabled: ${PRIMARY_DOMAIN_TLS_ENABLED}
+        hosts: ["${PRIMARY_DOMAIN}"]
+    basic:
+      enabled: ${PRIMARY_DOMAIN_BASIC_ENABLED}
+      secret: ${PRIMARY_DOMAIN_BASIC_SECRET}
+    certmanager:
+      enabled: ${PRIMARY_DOMAIN_CERTMANAGER_ENABLED}
+      issuer: ${PRIMARY_DOMAIN_CERTMANAGER_ISSUER}
+
+blue_green:
+  slot: ${BLUE_GREEN_SLOT}
+#  name: ${BACKEND_NAME}
+#  release: ${BACKEND_RELEASE}

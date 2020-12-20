@@ -1,0 +1,10 @@
+#!/bin/bash
+
+folder="${1:-"app"}"
+release="${2:-"test-bg"}"
+envFile="${3:-".env.example"}"
+
+(export $(cat "$envFile"); envsubst < $folder/values.yaml) | helm template \
+  -f - \
+  "$release" \
+  "$folder"

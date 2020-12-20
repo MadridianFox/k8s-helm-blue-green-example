@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}
+  labels:
+    {{- include "labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "labels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      volumes:
+        - name: tz-config
+          hostPath:
+            path: /usr/share/zoneinfo/Europe/Moscow
+            type: File
+#        - name: nginx-main-config-volume
+#          configMap:
+#            name: "{{ template "fullname" . }}-config-map"
+#            items:
+#              - key: nginxMainConfig
+#                path: nginx.conf
+#        - name: nginx-server-config-volume
+#          configMap:
+#            name: "{{ template "fullname" . }}-config-map"
+#            items:
+#              - key: nginxServerConfig
+#                path: default.conf.template
+
+      containers:
+      # ========================== NGINX
+      - name: nginx
+        image: "{{ .Values.nginx.repository }}:{{ .Values.nginx.tag }}"
+#        volumeMounts:
+#          - name: nginx-main-config-volume
+#            mountPath: /etc/nginx/nginx.conf
+#            subPath: nginx.conf
+#          - name: nginx-server-config-volume
+#            mountPath: /etc/nginx/templates/default.conf.template
+#            subPath: default.conf.template
+        env:
+          {{ include "nginx_env" . | indent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        ports:
+          - containerPort: 80
+            name: http
+            protocol: TCP
+
